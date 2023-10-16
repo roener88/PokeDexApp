@@ -1,15 +1,16 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import PokeImage from './components/PokeImage';
-import AttackInfo from './components/AttackInfo';
-import PokemonFetcher from './components/PokemonFetcher';
 import { Image } from 'expo-image';
+import { Accelerometer } from 'expo-sensors';
+import PokeImage from './components/PokeImage';
+import PokemonFetcher from './components/PokemonFetcher';
 
 
+// Creates a random number between 1 and 150 for the Pokemon Base Set
 const randomPokeIndex = () => Math.floor(Math.random() * 150) + 1;
-//let moveArray;
 
+// Capitalizes all the data from the API
 const capitalize = ( string ) => {
 
   const str = string;
@@ -17,9 +18,63 @@ const capitalize = ( string ) => {
 
 };
 
+// Maps all the Icon.svg files because the require function cannot get dynamic data
+const typeAssets = {
+  bug: { icon: require('./assets/typeIcons/bug.svg'), bgColor: '#C0D28C'},
+  dark: { icon: require('./assets/typeIcons/dark.svg'), bgColor: '#888097'},
+  dragon: { icon: require('./assets/typeIcons/dragon.svg'), bgColor: '#5F90DA'},
+  electric: { icon: require('./assets/typeIcons/electric.svg'), bgColor: '#FAEAA9'},
+  fairy: { icon: require('./assets/typeIcons/fairy.svg'), bgColor: '#F5C4F4'},
+  fighting: { icon: require('./assets/typeIcons/fighting.svg'), bgColor: '#E59AB2'},
+  fire: { icon: require('./assets/typeIcons/fire.svg'), bgColor: '#F5CBA2'},
+  flying: { icon: require('./assets/typeIcons/flying.svg'), bgColor: '#C9D6F0'},
+  ghost: { icon: require('./assets/typeIcons/ghost.svg'), bgColor: '#939DCD'},
+  grass: { icon: require('./assets/typeIcons/grass.svg'), bgColor: '#AED6A3'},
+  ground: { icon: require('./assets/typeIcons/ground.svg'), bgColor: '#E9B094'},
+  ice: { icon: require('./assets/typeIcons/ice.svg'), bgColor: '#B4E5DC'},
+  normal: { icon: require('./assets/typeIcons/normal.svg'), bgColor: '#BCBEBC'},
+  poison: { icon: require('./assets/typeIcons/poison.svg'), bgColor: '#C8A1DC'},
+  psychic: { icon: require('./assets/typeIcons/psychic.svg'), bgColor: '#F5B4BA'},
+  rock: { icon: require('./assets/typeIcons/rock.svg'), bgColor: '#D8CFB2'},
+  steel: { icon: require('./assets/typeIcons/steel.svg'), bgColor: '#97B1BD'},
+  water: { icon: require('./assets/typeIcons/water.svg'), bgColor: '#8AB5E4'},
+};
+
+// Function to retreive the Pokemon Type Icon dynamically
+const getTypeIcon = (typeName) => {
+
+  return typeAssets[typeName].icon || require('./assets/typeIcons/normal.svg');
+
+};
+
+// Function to retreive the Pokemon bgColor dynamically
+const getTypeBGColor = (typeName) => {
+
+  return typeAssets[typeName].bgColor || '#F4D500';
+
+};
+
 const App: React.FC = () => {
   const [pokemonData, setPokemonData] = useState(null);
   const [pokeIndex, setPokeIndex] = useState(randomPokeIndex());
+
+  useEffect(() => {
+    const subscription = Accelerometer.addListener((accelerometerData) => {
+     
+      const { x, y, z } = accelerometerData;
+      const acceleration = Math.sqrt(x * x + y * y + z * z);
+
+      
+      if (acceleration > 2) {
+        console.log('Shake!');
+        handleRefresh();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   const handleRefresh = () => {
     const newPokeIndex = randomPokeIndex();
@@ -42,14 +97,15 @@ const App: React.FC = () => {
         
         <>
 
-          <View style={styles.backgroundContainer}>
+          <View style={[styles.backgroundContainer, { backgroundColor: getTypeBGColor(pokemonData.types[0].type.name )}]}>
 
             <View style={styles.header}>
               <Text style={styles.headerName}>{capitalize(pokemonData.name)}</Text> 
               <Text style={styles.headerHP}>HP: {pokemonData.base_experience}</Text>
+             
               <Image 
-                source={require(`./assets/typeIcons/water.svg`)}
                 style={styles.icon} 
+                source={getTypeIcon(pokemonData.types[0].type.name)}
                 contentFit='contain'
               />
             </View>
@@ -70,17 +126,7 @@ const App: React.FC = () => {
             >
               <Text style={styles.infoText} >{pokemonData.genus} - Height: {pokemonData.height} - Weight: {pokemonData.weight}</Text>
             </LinearGradient>
-            
-            
-            {/* <ScrollView>
-              {pokemonData.moves && pokemonData.moves.length > 0 && (
-                pokemonData.moves.slice(0, 2).map((move, index) => (
-                  <AttackInfo key={index} attackName={`Attack ${index + 1}`} moveName={move.move.name} />
-                ))
-              )}
-            </ScrollView> */}
-            
-
+          
             <View style={styles.attackContainer}>
 
               <View style={styles.attackTextContainer}>
@@ -100,7 +146,7 @@ const App: React.FC = () => {
             </View>
             
             <View style={styles.refreshButton}>
-              <Text onPress={handleRefresh}>Refresh</Text>
+              <Text onPress={handleRefresh}>Shake your phone to catch a new Pokémon</Text>
             </View>
           </View>
         </>
@@ -120,7 +166,7 @@ const styles = StyleSheet.create({
   },
 
   backgroundContainer:{
-    backgroundColor: '#F0F',
+    // backgroundColor: '#F0F',
     width: '95%',
     height: '95%',
     borderRadius: 20,
